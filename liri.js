@@ -1,155 +1,110 @@
-require("dotenv").config();
-
-//Grab data from keys.js
-var keys = require('./keys.js');
-var request = require('request');
-var twitter = require('twitter');
-var spotify = require('spotify');
-var client = new twitter(keys.twitterKeys);
+var key = require('./keys.js');
 var fs = require('fs');
-
-//Stored argument's array
-var nodeArgv = process.argv;
+var result = '';
 var command = process.argv[2];
-//movie or song
-var x = "";
-//attaches multiple word arguments
-for (var i=3; i<nodeArgv.length; i++){
-  if(i>3 && i<nodeArgv.length){
-    x = x + "+" + nodeArgv[i];
-  } else{
-    x = x + nodeArgv[i];
+var searchName = process.argv.splice(3).join("-");
+
+
+function tweets() {
+  var params = {screen_name: 'L1RIB0T', count: 20};
+  var requestType = "Tweets";
+
+  key.twitterKeys.get('statuses/user_timeline', params, function(error, tweets, respond) {
+    if(error) throw error; 
+    for (var i = 0; i < 20; i++) {
+      result += tweets[i].created_at + "\n" + tweets[i].text + "\n\n";
+    }
+    console.log(result);
+    appendLog(requestType);
+  });
+  
+}
+
+function spotify() {
+  var spotify = require('spotify');
+  var requestType = "Spotify Search";
+  
+  if (!searchName) {
+    searchName = 'Ace Of Base The Sign'
   }
+
+  spotify.search({ type: 'track', query: searchName }, function(err, data) {
+    if ( err ) {
+        console.log('Error occurred: ' + err);
+        return;
+    }
+    result = 'Artist: ' + data.tracks.items[0].artists[0].name + '\nSong Name: ' + data.tracks.items[0].name + '\nFrom Album: ' + data.tracks.items[0].album.name + '\nPreview: ' + data.tracks.items[0].preview_url;
+    console.log(result);
+    appendLog(requestType);
+
+  });
+
 }
 
-//switch case
-switch(command){
+function movie() {
+  var request = require('request');
+  var requestType = "Movie Search";
+  
+  if(!searchName) {
+    searchName = "Mr. Nobody";
+  }
+  
+  request.get('http://www.omdbapi.com/?r=json&tomatoes=true&t=' + searchName, function (error, response, movie) {
+    if (!error && response.statusCode == 200) {
+      movie = JSON.parse(movie);
+      result = movie.Title + '\nYear: ' + movie.Year + '\nIMDB Rating: ' + movie.imdbRating + '\nCountry: ' + movie.Country + '\nLanguage: ' + movie.Language + '\nPlot: ' + movie.Plot + '\nActors: ' + movie.Actors + '\nRotten Tomatoes Rating: ' + movie.tomatoUserRating + '\nRotten Tomatoes URL: ' + movie.tomatoURL;
+      
+      console.log(result);
+      appendLog(requestType);
+    }
+  })
+}
+
+function says() {
+  var fs = require('fs');
+
+  fs.readFile('./random.txt', 'utf8', function(error, data) {
+    var dataArr = data.split(',');
+    command = dataArr[0];
+    searchName = dataArr[1];
+    switch (command) {
+      case "my-tweets":
+        tweets();
+        break;
+      case "spotify-this-song":
+        spotify();
+        break;
+      case "movie-this":
+        movie();
+        break;
+    }
+  });
+}
+
+function appendLog(type) {
+  fs.appendFile("log.txt", type +  "\n\n" + result + "\n\n------------\n\n", function(err) {
+      if(err) {
+        return console.log(err);
+      }
+    });
+}
+
+
+switch (command) {
   case "my-tweets":
-    showTweets();
-  break;
-
+    tweets();
+    break;
   case "spotify-this-song":
-    if(x){
-      spotifySong(x);
-    } else{
-      spotifySong("Fluorescent Adolescent");
-    }
-  break;
-
+    spotify();
+    break;
   case "movie-this":
-    if(x){
-      omdbData(x)
-    } else{
-      omdbData("Mr. Nobody")
-    }
-  break;
-
+    movie();
+    break;
   case "do-what-it-says":
-    doThing();
-  break;
-
-  default:
-    console.log("{Please enter a command: my-tweets, spotify-this-song, movie-this, do-what-it-says}");
-  break;
+    says();
+    break;
 }
 
-function showTweets(){
-  //Display last 20 Tweets
-  var screenName = {screen_name: 'stefanieding'};
-  client.get('statuses/user_timeline', screenName, function(error, tweets, response){
-    if(!error){
-      for(var i = 0; i<tweets.length; i++){
-        var date = tweets[i].created_at;
-        console.log("@StefanieDing: " + tweets[i].text + " Created At: " + date.substring(0, 19));
-        console.log("-----------------------");
-        
-        //adds text to log.txt file
-        fs.appendFile('log.txt', "@StefanieDing: " + tweets[i].text + " Created At: " + date.substring(0, 19));
-        fs.appendFile('log.txt', "-----------------------");
-      }
-    }else{
-      console.log('Error occurred');
-    }
-  });
-}
-
-function spotifySong(song){
-  spotify.search({ type: 'track', query: song}, function(error, data){
-    if(!error){
-      for(var i = 0; i < data.tracks.items.length; i++){
-        var songData = data.tracks.items[i];
-        //artist
-        console.log("Artist: " + songData.artists[0].name);
-        //song name
-        console.log("Song: " + songData.name);
-        //spotify preview link
-        console.log("Preview URL: " + songData.preview_url);
-        //album name
-        console.log("Album: " + songData.album.name);
-        console.log("-----------------------");
-        
-        //adds text to log.txt
-        fs.appendFile('log.txt', songData.artists[0].name);
-        fs.appendFile('log.txt', songData.name);
-        fs.appendFile('log.txt', songData.preview_url);
-        fs.appendFile('log.txt', songData.album.name);
-        fs.appendFile('log.txt', "-----------------------");
-      }
-    } else{
-      console.log('Error occurred.');
-    }
-  });
-}
-
-function omdbData(movie){
-  var omdbURL = 'http://www.omdbapi.com/?t=' + movie + '&plot=short&tomatoes=true';
-
-  request(omdbURL, function (error, response, body){
-    if(!error && response.statusCode == 200){
-      var body = JSON.parse(body);
-
-      console.log("Title: " + body.Title);
-      console.log("Release Year: " + body.Year);
-      console.log("IMdB Rating: " + body.imdbRating);
-      console.log("Country: " + body.Country);
-      console.log("Language: " + body.Language);
-      console.log("Plot: " + body.Plot);
-      console.log("Actors: " + body.Actors);
-      console.log("Rotten Tomatoes Rating: " + body.tomatoRating);
-      console.log("Rotten Tomatoes URL: " + body.tomatoURL);
-
-      //adds text to log.txt
-      fs.appendFile('log.txt', "Title: " + body.Title);
-      fs.appendFile('log.txt', "Release Year: " + body.Year);
-      fs.appendFile('log.txt', "IMdB Rating: " + body.imdbRating);
-      fs.appendFile('log.txt', "Country: " + body.Country);
-      fs.appendFile('log.txt', "Language: " + body.Language);
-      fs.appendFile('log.txt', "Plot: " + body.Plot);
-      fs.appendFile('log.txt', "Actors: " + body.Actors);
-      fs.appendFile('log.txt', "Rotten Tomatoes Rating: " + body.tomatoRating);
-      fs.appendFile('log.txt', "Rotten Tomatoes URL: " + body.tomatoURL);
-
-    } else{
-      console.log('Error occurred.')
-    }
-    if(movie === "Mr. Nobody"){
-      console.log("-----------------------");
-      console.log("If you haven't watched 'Mr. Nobody,' then you should: http://www.imdb.com/title/tt0485947/");
-      console.log("It's on Netflix!");
-
-      //adds text to log.txt
-      fs.appendFile('log.txt', "-----------------------");
-      fs.appendFile('log.txt', "If you haven't watched 'Mr. Nobody,' then you should: http://www.imdb.com/title/tt0485947/");
-      fs.appendFile('log.txt', "It's on Netflix!");
-    }
-  });
-
-}
-
-function doThing(){
-  fs.readFile('random.txt', "utf8", function(error, data){
-    var txt = data.split(',');
-
-    spotifySong(txt[1]);
-  });
+if (!command) {
+  console.log("Oops. You broke it! Let's fix it? :" + '\n' + "1. [my-tweets] to see tweets." + '\n' + "2. [spotify-this-song] [song-name] to Spotify a song" + '\n' + "3. [movie-this] [movie-name] Will bring back movie info of your choice" + '\n' + "4. [do-what-it-says] IT'S A SURPRISE!");
 }
