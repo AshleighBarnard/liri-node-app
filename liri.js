@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 //Grab data from keys.js
 var keys = require('./keys.js');
 var request = require('request');
