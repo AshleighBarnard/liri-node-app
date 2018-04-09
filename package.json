@@ -23,5 +23,6 @@
     "request": "^2.85.0",
     "terminal-link": "^1.0.0",
     "twitter": "^1.7.1"
-  }
+  },
+  "devDependencies": {}
 }
