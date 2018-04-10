@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 var key = require('./keys.js');
 var fs = require('fs');
 var result = '';
@@ -5,37 +7,40 @@ var command = process.argv[2];
 var searchName = process.argv.splice(3).join("-");
 
 
+var Twitter = require('twitter');
 function tweets() {
   var params = {screen_name: 'L1RIB0T', count: 20};
   var requestType = "Tweets";
+  var newTweet = new Twitter(key.twitter);
 
-  key.twitterKeys.get('statuses/user_timeline', params, function(error, tweets, respond) {
+  newTweet.get('statuses/user_timeline', params, function(error, tweets, response) {
     if(error) throw error; 
-    for (var i = 0; i < 20; i++) {
-      result += tweets[i].created_at + "\n" + tweets[i].text + "\n\n";
-    }
-    console.log(result);
-    appendLog(requestType);
+    // for (var i = 0; i < 20; i++) {
+    //   result += tweets[i].created_at + "\n" + tweets[i].text + "\n\n";
+    // }
+    console.log(tweets);
+ 
   });
   
 }
 
 function spotify() {
-  var spotify = require('spotify');
+  var Spotify = require('node-spotify-api');
   var requestType = "Spotify Search";
+  var newSpotify = new Spotify(key.spotify);
   
   if (!searchName) {
     searchName = 'Ace Of Base The Sign'
   }
 
-  spotify.search({ type: 'track', query: searchName }, function(err, data) {
+  newSpotify.search({ type: 'track', query: searchName }, function(err, data) {
     if ( err ) {
         console.log('Error occurred: ' + err);
         return;
     }
     result = 'Artist: ' + data.tracks.items[0].artists[0].name + '\nSong Name: ' + data.tracks.items[0].name + '\nFrom Album: ' + data.tracks.items[0].album.name + '\nPreview: ' + data.tracks.items[0].preview_url;
     console.log(result);
-    appendLog(requestType);
+   
 
   });
 
@@ -48,14 +53,15 @@ function movie() {
   if(!searchName) {
     searchName = "Mr. Nobody";
   }
-  
-  request.get('http://www.omdbapi.com/?r=json&tomatoes=true&t=' + searchName, function (error, response, movie) {
+  console.log("working");
+
+  request('http://www.omdbapi.com/?r=json&tomatoes=true&t=' + searchName, function (error, response, movie) {
     if (!error && response.statusCode == 200) {
       movie = JSON.parse(movie);
       result = movie.Title + '\nYear: ' + movie.Year + '\nIMDB Rating: ' + movie.imdbRating + '\nCountry: ' + movie.Country + '\nLanguage: ' + movie.Language + '\nPlot: ' + movie.Plot + '\nActors: ' + movie.Actors + '\nRotten Tomatoes Rating: ' + movie.tomatoUserRating + '\nRotten Tomatoes URL: ' + movie.tomatoURL;
       
       console.log(result);
-      appendLog(requestType);
+     
     }
   })
 }
